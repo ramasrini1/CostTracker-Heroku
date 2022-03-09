@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, BooleanField, IntegerField, RadioField, SelectField
 from wtforms.validators import InputRequired, Optional, DataRequired, Length
-from wtforms import PasswordField, TextAreaField
+from wtforms import PasswordField, TextAreaField, validators
 
 
 class AddEventForm(FlaskForm):
@@ -14,7 +14,7 @@ class AddExpenseForm(FlaskForm):
   
   evt = SelectField("Event", coerce=int)
   friend = SelectField("Friend")
-  cost = IntegerField("Enter Your expense amt")
+  cost = IntegerField("Enter Your expense amt", validators=[validators.NumberRange(min=1, max=None)] )
   cost_info = StringField("Cost Info(optional)")
 
 
@@ -30,6 +30,4 @@ class LoginForm(FlaskForm):
 
 class AdminForm(FlaskForm):
     """Admin form."""
-    #username = StringField('Username', validators=[DataRequired()])
-    #password = PasswordField('Password', validators=[Length(min=6)])
     access_token = StringField('Access Token', validators=[Length(min=6)])
