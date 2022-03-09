@@ -19,7 +19,7 @@ if (db_url):
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///cost_tracker_db'
 
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://tjtmkmvogovxfb:73300ecf13a78b52a2c8893f5ed07d26ed76fa46bef9e2ce12e6e719a956f31d@ec2-54-83-21-198.compute-1.amazonaws.com:5432/d9arss0jmaugbv'
+
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
@@ -193,7 +193,8 @@ def add_expense():
             flash(f"Integrity Error: You have entered your expense report", "danger")
             return render_template("/message.html", msg=msg)
         
-        return redirect("/events/list")
+        #return redirect("/events/list")
+        return redirect(f"/event/expenses/{event_id}")
     
     return render_template("/expenses/add_expense_form.html", form=form )
 
