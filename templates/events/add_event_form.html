@@ -1,18 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
-  <h1>Add Event</h1>
-  <form method="POST">
-    {{ form.hidden_tag() }}
-    {% for field in form if field.widget.input_type != 'hidden'%}
-    <p>
-      {{field.label}}
-      {{field}}
-
-      {% for err in field.errors %}
-      {{err}}
-      {% endfor %}
-    </p>
-    {% endfor %}
-    <button>Submit</button>
-  </form>
+  <div class="row justify-content-md-center">
+    <div class="col-md-7 col-lg-5">
+      <h1>Add Event</h1>
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        {% for field in form if field.widget.input_type != 'hidden'%}
+          {% for error in field.errors  %}
+            <span class="text-danger">{{ error }}</span>
+          {% endfor %}
+          {{ field(placeholder=field.label.text, class="form-control") }}
+        {% endfor %}
+        
+        <button class="btn btn-primary btn-block btn-lg">Submit</button>
+      </form>
+    </div>
+  </div>
   {% endblock %}
+
+  

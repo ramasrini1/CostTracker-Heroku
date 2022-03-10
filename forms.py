@@ -6,16 +6,19 @@ from wtforms import PasswordField, TextAreaField, validators
 
 class AddEventForm(FlaskForm):
     """Form for adding events."""
-
     evt_name = StringField("Event Name")
 
+class ShowEventForm(FlaskForm):
+    """Form for adding events."""
+    event = SelectField("Event Name")
+    
 class AddExpenseForm(FlaskForm):
   """Add Expenes Form """
   
-  evt = SelectField("Event", coerce=int)
-  friend = SelectField("Friend")
+  evt = SelectField("Select Event", coerce=int)
+  friend = SelectField("Add Friend")
   cost = IntegerField("Enter Your expense amt", validators=[validators.NumberRange(min=1, max=None)] )
-  cost_info = StringField("Cost Info(optional)")
+  cost_info = StringField("Expense Info(optional)")
 
 
 class UserAddForm(FlaskForm):

@@ -1,8 +1,43 @@
 {% extends 'base.html' %}
 {% block content %}
+  {% if event_id %}
+  <h6>View <a  href="/event/expenses/{{event_id}}"><i>Split Expenses</a></i></a> for {{evt_name}} </h6>
+  <hr>
+  {% endif %}
   <h1>Expense Form</h1>
   <h6>Add expenses for the selected event and friend </h6>
-  <form method="POST">
+  <div>
+    <form method="POST">
+      {{ form.hidden_tag() }}
+      {% for field in form if field.widget.input_type != 'hidden'%}
+        {% for error in field.errors  %}
+          <span class="text-danger">{{ error }}</span>
+        {% endfor %}
+        {{ field(placeholder=field.label.text, class="form-control") }}
+      {% endfor %}
+      
+      <button class="btn btn-primary btn-block btn-lg">Submit</button>
+    </form>
+    <br><br>
+    <hr>
+   
+  </div>
+  {% endblock %}
+
+    
+    <!-- <h2 class="">Select Your Event.</h2>
+    <form method="POST" action="">
+      {{ event_form.hidden_tag() }}
+      {% for field in event_form if field.widget.input_type != 'hidden'%}
+        {% for error in field.errors  %}
+          <span class="text-danger">{{ error }}</span>
+        {% endfor %}
+        {{ field(placeholder=field.label.text, class="form-control") }}
+      {% endfor %}
+      <button class="btn btn-primary btn-block btn-lg">Split Expense</button>
+    </form> -->
+
+  <!-- <form method="POST">
     {{ form.hidden_tag() }}
     {% for field in form if field.widget.input_type != 'hidden'%}
     <p>
@@ -15,5 +50,22 @@
     </p>
     {% endfor %}
     <button>Submit</button>
-  </form>
-{% endblock %}
+  </form> -->
+  <!-- <br><br>
+  <hr>
+  <h4>Select Event to get expense info</h4>
+  <form method="POST">
+    {{ event_form.hidden_tag() }}
+    {% for field in event_form if field.widget.input_type != 'hidden'%}
+    <p>
+      {{field.label}}
+      {{field}}
+
+      {% for err in field.errors %}
+      {{err}}
+      {% endfor %}
+    </p>
+    {% endfor %}
+    <button>Split Expenses</button>
+  </form> -->
+  

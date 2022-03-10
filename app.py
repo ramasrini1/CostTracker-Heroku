@@ -2,7 +2,7 @@ from flask import Flask, request, render_template,  redirect, flash, session, g,
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 from models import db, connect_db, Events, Expenses, User
-from forms import AddEventForm, AddExpenseForm, UserAddForm, LoginForm, AdminForm
+from forms import AddEventForm, AddExpenseForm, UserAddForm, LoginForm, AdminForm, ShowEventForm
 from expenses import EvtExpenses
 from venmo import Venmo
 import os
@@ -165,10 +165,13 @@ def add_expense():
         return render_template("/message.html", msg=msg)
 
     form =  AddExpenseForm()
+    event_form = ShowEventForm()
     evts = [ [event.id, event.evt_name] for event in Events.query.all()]
     friends = [ [user.username, user.username] for user in User.query.filter_by(role = None) ]
     
+    
     form.evt.choices = evts
+    event_form.event.choices = evts
     form.friend.choices = friends
 
     if form.validate_on_submit():
@@ -197,10 +200,15 @@ def add_expense():
             flash(f"Integrity Error: You have entered your expense report", "danger")
             return render_template("/message.html", msg=msg)
         
+        flash(f"Friend {username} expense added", "info")
         #return redirect("/events/list")
-        return redirect(f"/event/expenses/{event_id}")
+        event = Events.query.get_or_404(event_id)
+        evt_name = event.evt_name
+        
+        return render_template(f"/expenses/add_expense_form.html/", form=form, 
+                                event_form = event_form, event_id=event_id, evt_name=evt_name)
     
-    return render_template("/expenses/add_expense_form.html", form=form )
+    return render_template("/expenses/add_expense_form.html", form=form, event_form = event_form )
 
 
 @app.route("/event/expenses/<int:event_id>", methods=["GET", "POST"])
