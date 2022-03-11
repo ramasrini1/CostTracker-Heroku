@@ -17,6 +17,7 @@ class Events(db.Model):
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     evt_name = db.Column(db.Text, nullable=False, unique=True)
+    evt_type = db.Column(db.Text, nullable=True)
     expenses = db.relationship("Expenses", backref="events")
 
 

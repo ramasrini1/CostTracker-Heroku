@@ -165,13 +165,13 @@ def add_expense():
         return render_template("/message.html", msg=msg)
 
     form =  AddExpenseForm()
-    
+    event_form = ShowEventForm()
     evts = [ [event.id, event.evt_name] for event in Events.query.filter_by(evt_type = None)]
     friends = [ [user.username, user.username] for user in User.query.filter_by(role = None) ]
-
-    friend_list = []
-
+    
+    
     form.evt.choices = evts
+    event_form.event.choices = evts
     form.friend.choices = friends
 
     if form.validate_on_submit():
@@ -181,20 +181,15 @@ def add_expense():
         cost_info = form.cost_info.data
         username = form.friend.data
 
-        event = Events.query.get_or_404(event_id)
-        evt_name = event.evt_name
-
         exps = db.session.query(Expenses).filter(Expenses.event_id == event_id).filter( (Expenses.status == 'paid') | (Expenses.status== 'Request Sent') | (Expenses.status == 'No Action') )
         #If any of the expenses have been processed, no more expenses can be 
         # added for that event.
-
+        
         if (exps.count() > 0):
+            msg = "Deadline over expenses computed you can no longer add additional expenses"
             flash(f"Deadline over expenses computed you can no longer add additional expenses", "danger")
-            
-            friend_list = get_friend_list(event_id)
-            return render_template("/expenses/add_expense_form.html", form=form, event_id=event_id, 
-                evt_name=evt_name, friend_list=friend_list )
-    
+            return render_template("/message.html", msg=msg)
+
         expense = Expenses( username = username, event_id=event_id, cost=cost, cost_info=cost_info )
         
         try:
@@ -202,34 +197,19 @@ def add_expense():
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-         
+            msg = "Integrity Error: You have entered your expense report"
             flash(f"Integrity Error: You have entered your expense report", "danger")
-            friend_list = get_friend_list(event_id)
-            
-            return render_template("/expenses/add_expense_form.html", form=form, event_id=event_id, 
-                evt_name=evt_name, friend_list=friend_list )
-           
-        
-        #Get Friends/usernames for the event from expense table
-        friend_list = get_friend_list(event_id)
+            return render_template("/message.html", msg=msg)
         
         flash(f"Friend {username} expense added", "info")
-
+        #return redirect("/events/list")
+        event = Events.query.get_or_404(event_id)
+        evt_name = event.evt_name
+        
         return render_template(f"/expenses/add_expense_form.html/", form=form, 
-                                 event_id=event_id, evt_name=evt_name, friend_list=friend_list)
+                                event_form = event_form, event_id=event_id, evt_name=evt_name)
     
-    return render_template("/expenses/add_expense_form.html", form=form )
-
-#Get Friends/usernames for the event from expense table
-def get_friend_list(event_id):
-    friend_list = []
-    
-    exp_list = Expenses.query.filter_by(event_id=event_id)
-    if (exp_list.count() > 0):
-        for e in exp_list:
-            friend_list.append(e.username)
-    return friend_list
-
+    return render_template("/expenses/add_expense_form.html", form=form, event_form = event_form )
 
 
 @app.route("/event/expenses/<int:event_id>", methods=["GET", "POST"])
@@ -385,62 +365,25 @@ def is_admin(username):
 
 ##############################################################################
 # Demo Route
-@app.route("/demo/demo_app", methods=["GET", "POST"])
+@app.route("/demo_app", methods=["GET", "POST"])
 def demo_app():
     init_demo_data()
-    evt_name = "Mars Trip"
-    Expenses.query.filter_by(username='Nemo').delete()
-    
     form =  AddExpenseForm()
     event_form = ShowEventForm()
     
     evts = [ [event.id, event.evt_name] for event in Events.query.filter_by(evt_name = 'Mars Trip')]
-    friends = [ [user.username, user.username] for user in User.query.filter_by(username = 'Nemo') ]
+    friends = [ [user.username, user.username] for user in User.query.filter_by(username = 'nemo') ]
 
     form.evt.choices = evts
     event_form.event.choices = evts
     form.friend.choices = friends
 
-    demo_evt = Events.query.filter_by(evt_name='Mars Trip').first()
-    friend_list = get_friend_list(demo_evt.id)
+    return render_template("/expenses/add_expense_form.html", form=form, event_form = event_form )
 
-    if form.validate_on_submit():
-       
-        cost = form.cost.data
-        event_id = form.evt.data
-        cost_info = form.cost_info.data
-        username = form.friend.data
-
-        event = Events.query.get_or_404(event_id)
-        evt_name = event.evt_name
-        
-        expense = Expenses( username = username, event_id=event_id, cost=cost, cost_info=cost_info )
-        
-        try:
-            db.session.add(expense)
-            db.session.commit()
-        except IntegrityError:
-            db.session.rollback()
-         
-            flash(f"Integrity Error: You have entered your expense report", "danger")
-            return render_template("message.html", msg="Error")
-        
-        exps = Expenses.query.filter_by(event_id=event_id).all()
-        friend_list = get_friend_list(event_id)
-        
-        evtExpenses = EvtExpenses(exps)
-        flash(f"Splitting expenses between nemo and friends. If action required, payment will be settled soon", "info")
-   
-        return render_template("/expenses/payment.html", 
-                            payments=evtExpenses.payments, 
-                            event_name=evt_name,
-                            event_id = event_id,
-                            total_cost=evtExpenses.total_cost,
-                            target=evtExpenses.target)
-        
-    flash(f"This is a Demo of the CostTracker App!", "info")
-    return render_template("/demo/demo_form.html", form=form, friend_list=friend_list, evt_name=evt_name )
-
+    #return render_template("/message.html", msg="init demo data")
+    
+    # evts = [ [event.id, event.evt_name] for event in Events.query.filter_by(evt_type = 'demo')]
+    # friends = [ [user.username, user.username] for user in User.query.filter_by(role = 'demo') ]
 
 def init_demo_data():
     evt_name = "Mars Trip"
@@ -449,7 +392,7 @@ def init_demo_data():
     #Expenses.query.filter_by(username='nemo').delete()
     evt1 = Events(
      evt_name = evt_name,
-     evt_type =  'demo'
+     evt_type =  demo
     )
     try:
         event_id =  db.session.add(evt1)
@@ -458,79 +401,45 @@ def init_demo_data():
             db.session.rollback()
 
     f1 = User(
-        username = "Nemo",
+        username = "nemo",
         role = demo,
         password = "nemopass"
     )
     f2 = User(
-        username = "Jelly Fish",
+        username = "jellyfish",
         role = demo,
         password = "jellypass"
     )
     f3 = User(
-        username = "Blue Whale",
+        username = "blueWhale",
         role = demo,
         password = "whalepass"
     )
 
     try:
-        db.session.add(f1)
+        db.session.add_all([f1, f2, f3])
         db.session.commit()
     except IntegrityError:
-        db.session.rollback()
-
-    try:
-        jellyFishId =  db.session.add(f2)
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-
-    try:
-        blueWhaleId = db.session.add(f3)
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-
-    # u = User.query.filter_by(username='blueWhale').first()
-    # blueWhaleId = u.id
-
-    # u = User.query.filter_by(username='jellyfish').first()
-    # jellyFishId = u.id
-
-    demo_evt = Events.query.filter_by(evt_name=evt_name).first()
-    demo_evt_id = demo_evt.id
-
+            db.session.rollback()
+    
 
     e1 = Expenses(
-        username="Blue Whale",
-        event_id = demo_evt_id,
+        username="nemo",
+        event_id = event_id,
         cost=1,
-        cost_info="Hotel and gas"
+        cost_info="Spent for hotel and gas"
     )
 
     e2 = Expenses(
-        username="Jelly Fish",
-        event_id =  demo_evt_id,
-        cost=3,
-        cost_info="Food and drinks"
+        username="jelly-fish",
+        event_id = event_id,
+        cost=1,
+        cost_info="Spent for hotel and gas"
     )
 
     try:
-        db.session.add(e1)
+        db.session.add_all([e1, e2])
         db.session.commit()
     except IntegrityError:
-        print("err1")
-        db.session.rollback()
+            db.session.rollback()
     
-    try:
-        db.session.add(e2)
-        db.session.commit()
-    except IntegrityError:
-        print("err2")
-        db.session.rollback()
-    
-##############################################################################
-# About Route
-@app.route("/about", methods=["GET", "POST"])
-def about():
-    return render_template("/about.html")

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="box1 mt-5">
+    <img src="/static/images/share_cost.jpeg" width="500" height="250" alt="Example image"/>
+  </div>
+  <div class="center mt-5 mb-4">
+    
+    <h4 align="center"> The CostTracker app computes and splits your travel/restaurant expenses among friends</h4>
+    <div  class= "box2 mt-4">
+    <p>Have you gone on a trip with your friends and wondered how to split the 
+    cost of the total travel expenses? The Cost Tracker app will help you split 
+    the cost and make the payments to the individual bank accounts. 
+    </p>
+    
+    <p>This web app will provide an interface for each individual in the group to 
+    enter their cost and (Event)trip name. An algorithm will be used to determine the amount 
+    that each individual will contribute. And a payment request or money will be sent to 
+    each user’s venmo account using the venmo api through the Cost Tracker App. 
+    A user gets money deposited or gets a request payment depending 
+    upon their contribution to the trip.
+  </p>
+  <p>The money transaction as of now is only handled by the admin. 
+  The users of the app just need to enter their expenses for the trip and their 
+  expenses will be settled by the admin.
+  </p>
+  <p><b>User Flow</b>
+   <ul>
+   <li>Sign Up/Login</li>
+   <li>Add Event: Creates A New Event</li>
+   <li>Add Expense: Select Event->Add Friend ->Enter Expense ->Submit Expense</li>
+   <li>Split Expense -> View Payment/Expense Report</li>
+   <li>Admin Settles the Balance </li>
+   </ul>
+   Check the <a href="/demo/demo_app">Demo Account</a> for user experience
+  </p>
+  <p>
+   <b>Tools And Technology</b>
+   <ul> 
+    <li>Python Flask, Jinja Template</li>
+    <li>Database: Postgresql </li>
+    <li>CSS/HTML</li>
+    <li><a href="https://github.com/mmohades/Venmo">Venmo SDK</a></li>
+   </ul>
+
+  </p>
+
+  </div>
+  
+  
+  </div>
+
+{% endblock %}

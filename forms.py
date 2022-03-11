@@ -16,8 +16,8 @@ class AddExpenseForm(FlaskForm):
   """Add Expenes Form """
   
   evt = SelectField("Select Event", coerce=int)
-  friend = SelectField("Add Friend")
-  cost = IntegerField("Enter Your expense amt", validators=[validators.NumberRange(min=1, max=None)] )
+  friend = SelectField("Select Friend", validators=[InputRequired()])
+  cost = IntegerField("Enter expense amt", validators=[validators.NumberRange(min=1, max=None)] )
   cost_info = StringField("Expense Info(optional)")
 
 

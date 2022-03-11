@@ -1,21 +1,22 @@
 {% extends 'base.html' %}
 {% block content %}
+  <h4>For demo purposes an event has been created and two friends have been added to the event</h4>
   {% if friend_list  %}
-  <h6><a  href="/event/expenses/{{event_id}}"><i>Split Expenses</a></i></a>&nbsp;for {{evt_name}} </h6>
    <div>
-    Friend List: [ &nbsp;
+    <b>Friend List:</b> [ &nbsp;
      {% for friend in friend_list %}
       <span>{{friend}}</span> &nbsp;
      {% endfor %}
      ]
+  <br><br>
+  
    </div>
   <hr>
   {% endif %}
-  <h1>Expense Form</h1>
- 
+  
   <div>
-    <h6>Select Event and Friend and enter expenses </h6><br>
-     <form method="POST" id="user_form">
+    <h6>Add expenses for the selected event and friend </h6><br>
+    <form method="POST" id="user_form">
         {{ form.hidden_tag() }}
 
         {% for field in form if field.widget.input_type != 'hidden' %}
@@ -25,7 +26,7 @@
           {{ field(placeholder= field.label.text, class="form-control") }}
         {% endfor %}
 
-        <button class="btn btn-primary btn-block btn-lg">Log in</button>
+        <button class="btn btn-primary btn-block btn-lg">Add Expense</button>
      </form>
     <br><br>
     <hr>
