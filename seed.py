@@ -1,5 +1,5 @@
 from app import app
-from models import db, Events, Expenses, User
+from models import db, Groups, Expenses, User
 
 db.drop_all()
 db.create_all()

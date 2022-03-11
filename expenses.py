@@ -1,4 +1,4 @@
-class EvtExpenses:
+class GroupExpenses:
     def __init__(self, expenses):
         self.expenses = expenses
         self.friends = []

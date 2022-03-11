@@ -1,9 +1,9 @@
 from flask import Flask, request, render_template,  redirect, flash, session, g, abort
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
-from models import db, connect_db, Events, Expenses, User
-from forms import AddEventForm, AddExpenseForm, UserAddForm, LoginForm, AdminForm, ShowEventForm
-from expenses import EvtExpenses
+from models import db, connect_db, Groups, Expenses, User
+from forms import AddGroupForm, AddExpenseForm, UserAddForm, LoginForm, AdminForm, ShowGroupForm
+from expenses import GroupExpenses
 from venmo import Venmo
 import os
 
@@ -120,42 +120,42 @@ def home_page():
 
 
 ##############################################################################
-# Events Route
+# Groups Route
 
-@app.route('/events/new', methods=["GET", "POST"])
-def add_event():
-    """Renders add event form (GET) or handles event form submission (POST)"""
-    form = AddEventForm()
+@app.route('/groups/new', methods=["GET", "POST"])
+def add_group():
+    """Renders add group form (GET) or handles event form submission (POST)"""
+    form = AddGroupForm()
     
     if form.validate_on_submit():
-        evt_name = form.evt_name.data
-        event = Events( evt_name = evt_name )
+        gp_name = form.gp_name.data
+        group = Groups( gp_name = gp_name )
         
         try:
-            db.session.add(event)
+            db.session.add(group)
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
             msg = f"Choose another name"
-            flash(f"This event {evt_name} already exists.", "danger")
-            return redirect("/events/new")
+            flash(f"This group {gp_name} already exists.", "danger")
+            return redirect("/groups/new")
         
-        return redirect('/events/list')
+        return redirect('/groups/list')
     
-    return render_template("/events/add_event_form.html", form=form)
+    return render_template("/groups/add_group.html", form=form)
 
-@app.route("/events/list")
-def list_events():
-    """Return all events in db."""
-    events = Events.query.filter_by(evt_type = None)
-    return render_template("/events/event_list.html", events=events)
+@app.route("/groups/list")
+def list_groupss():
+    """Return all groups in db."""
+    groups = Groups.query.filter_by(gp_type = None)
+    return render_template("/groups/group_list.html", groups=groups)
 
 
 ##############################################################################
 # Expenses Route
 @app.route("/expenses/add_expense", methods=["GET", "POST"])
 def add_expense():
-    """Show Event Expense Form.
+    """Show Groups Expense Form.
        Get method for showing form
        Post method for processing the form
     """
@@ -166,36 +166,34 @@ def add_expense():
 
     form =  AddExpenseForm()
     
-    evts = [ [event.id, event.evt_name] for event in Events.query.filter_by(evt_type = None)]
+    groups = [ [group.gp_name, group.gp_name] for group in Groups.query.filter_by(gp_type = None)]
     friends = [ [user.username, user.username] for user in User.query.filter_by(role = None) ]
 
     friend_list = []
 
-    form.evt.choices = evts
+    form.gp.choices = groups
     form.friend.choices = friends
 
     if form.validate_on_submit():
        
         cost = form.cost.data
-        event_id = form.evt.data
+        group_name = form.gp.data
         cost_info = form.cost_info.data
         username = form.friend.data
 
-        event = Events.query.get_or_404(event_id)
-        evt_name = event.evt_name
-
-        exps = db.session.query(Expenses).filter(Expenses.event_id == event_id).filter( (Expenses.status == 'paid') | (Expenses.status== 'Request Sent') | (Expenses.status == 'No Action') )
+        exps = db.session.query(Expenses).filter(Expenses.group_name == group_name).filter( (Expenses.status == 'paid') | (Expenses.status== 'Request Sent') | (Expenses.status == 'No Action') )
         #If any of the expenses have been processed, no more expenses can be 
         # added for that event.
 
         if (exps.count() > 0):
             flash(f"Deadline over expenses computed you can no longer add additional expenses", "danger")
             
-            friend_list = get_friend_list(event_id)
-            return render_template("/expenses/add_expense_form.html", form=form, event_id=event_id, 
-                evt_name=evt_name, friend_list=friend_list )
+            friend_list = get_friend_list(group_name)
+            return render_template("/expenses/add_expense_form.html", form=form, 
+                                    group_name=group_name, 
+                                    friend_list=friend_list )
     
-        expense = Expenses( username = username, event_id=event_id, cost=cost, cost_info=cost_info )
+        expense = Expenses( username = username, group_name=group_name, cost=cost, cost_info=cost_info )
         
         try:
             db.session.add(expense)
@@ -204,27 +202,27 @@ def add_expense():
             db.session.rollback()
          
             flash(f"Integrity Error: You have entered your expense report", "danger")
-            friend_list = get_friend_list(event_id)
+            friend_list = get_friend_list(group_name)
             
-            return render_template("/expenses/add_expense_form.html", form=form, event_id=event_id, 
-                evt_name=evt_name, friend_list=friend_list )
+            return render_template("/expenses/add_expense_form.html", form=form, 
+                                    group_name=group_name, friend_list=friend_list )
            
         
         #Get Friends/usernames for the event from expense table
-        friend_list = get_friend_list(event_id)
+        friend_list = get_friend_list(group_name)
         
         flash(f"Friend {username} expense added", "info")
 
         return render_template(f"/expenses/add_expense_form.html/", form=form, 
-                                 event_id=event_id, evt_name=evt_name, friend_list=friend_list)
+                                  group_name=group_name, friend_list=friend_list)
     
     return render_template("/expenses/add_expense_form.html", form=form )
 
 #Get Friends/usernames for the event from expense table
-def get_friend_list(event_id):
+def get_friend_list(group_name):
     friend_list = []
     
-    exp_list = Expenses.query.filter_by(event_id=event_id)
+    exp_list = Expenses.query.filter_by(group_name=group_name)
     if (exp_list.count() > 0):
         for e in exp_list:
             friend_list.append(e.username)
@@ -232,27 +230,23 @@ def get_friend_list(event_id):
 
 
 
-@app.route("/event/expenses/<int:event_id>", methods=["GET", "POST"])
-def show_expenses(event_id):
-    """Split Expenses For this event_id among friends
+@app.route("/groups/expenses/<group_name>", methods=["GET", "POST"])
+def show_expenses(group_name):
+    """Split Expenses For this group among friends
     """
-    results = Expenses.query.filter_by(event_id=event_id)
+    results = Expenses.query.filter_by(group_name=group_name)
     if (results.count() == 0):
         return render_template("/message.html", msg="No Expenses Entered")
-    
-    event = Events.query.get_or_404(event_id)
-    event_name = event.evt_name
 
-    exps = Expenses.query.filter_by(event_id=event_id).all()
+    exps = Expenses.query.filter_by(group_name=group_name).all()
 
-    evtExpenses = EvtExpenses(exps)
+    gpExpenses = GroupExpenses(exps)
    
     return render_template("/expenses/payment.html", 
-                            payments=evtExpenses.payments, 
-                            event_name=event_name,
-                            event_id = event_id,
-                            total_cost=evtExpenses.total_cost,
-                            target=evtExpenses.target)
+                            payments=gpExpenses.payments, 
+                            group_name=group_name,
+                            total_cost=gpExpenses.total_cost,
+                            target=gpExpenses.target)
 
 @app.route("/request_payment", methods=["GET", "POST"])
 def request_payment():
@@ -262,9 +256,8 @@ def request_payment():
     amount = request.form['amt']
     amount = float(amount)
     user_name = request.form['user_name']
-    event_id  = request.form['evt']
-    event_id  = int(event_id)
-   
+    gp_name  = request.form['gp']
+    
     
     msg = f"Permission Denied Log In As Admin"
 
@@ -277,23 +270,20 @@ def request_payment():
 
             venmo = Venmo(access_token)
             user_id = venmo.get_user_id_by_username(user_name)
-
-            event = Events.query.get_or_404(event_id)
-            event_name = event.evt_name
             
-            message = f"Request payment ${amount} for event {event_name}"
+            message = f"Request payment ${amount} for event {gp_name}"
     
             success = venmo.request_money(amount, message, user_id)
     
             if (success):
              
-                single_expense = Expenses.query.filter_by(event_id=event_id, username=user_name).first()
+                single_expense = Expenses.query.filter_by(group_name=gp_name, username=user_name).first()
                 
                 single_expense.status = 'Request Sent'
                 single_expense.payment_amt = amount
                 db.session.commit()
                 
-                msg = f"{event_name}:Sent payment request to Venmo user_id: ({user_name})for ${amount}"
+                msg = f"{gp_name}:Sent payment request to Venmo user_id: ({user_name})for ${amount}"
             else:
                 msg = f"Unable to send payment request to user_id: {user_name}"
     
@@ -310,31 +300,27 @@ def send_payment():
     payment_amount = request.form['amt']
     payment_amount = float(payment_amount)
     user_name = request.form['user_name']
-    event_id  = request.form['evt']
-    event_id  = int(event_id)
-  
+    group_name  = request.form['gp']
+    
     if (g.user and is_admin(g.user.username)):
       
         if ( ACCESS_TOKEN in session ):
-
-            event = Events.query.get_or_404(event_id)
-            event_name = event.evt_name
             
             access_token = session[ACCESS_TOKEN]
             venmo = Venmo(access_token)
             
             user_id = venmo.get_user_id_by_username(user_name)
-            payment_note = f"{user_name}, Payment ${payment_amount} for event {event_name}"
+            payment_note = f"{user_name}, Payment ${payment_amount} for event {group_name}"
     
             success = venmo.send_money(payment_amount, payment_note, user_id )
 
             if (success):
-                single_expense = Expenses.query.filter_by(event_id=event_id, username=user_name).first()
+                single_expense = Expenses.query.filter_by(group_name=group_name, username=user_name).first()
                 single_expense.status = 'Paid'
                 single_expense.payment_amt = payment_amount
                 db.session.commit()
 
-                msg = f"{event_name}Sent payment to Venmo user_id: ({user_name})for ${payment_amount}"
+                msg = f"{group_name}Sent payment to Venmo user_id: ({user_name})for ${payment_amount}"
             else:
                 msg = f"Unable to send payment to user_id: {user_name}"
             
@@ -388,33 +374,33 @@ def is_admin(username):
 @app.route("/demo/demo_app", methods=["GET", "POST"])
 def demo_app():
     init_demo_data()
-    evt_name = "Mars Trip"
+    gp_name = "Mars Trip"
     Expenses.query.filter_by(username='Nemo').delete()
     
     form =  AddExpenseForm()
-    event_form = ShowEventForm()
+    #group_form = ShowGroupForm()
     
-    evts = [ [event.id, event.evt_name] for event in Events.query.filter_by(evt_name = 'Mars Trip')]
+    groups = [ [group.gp_name, group.gp_name] for group in Groups.query.filter_by(gp_name = gp_name)]
     friends = [ [user.username, user.username] for user in User.query.filter_by(username = 'Nemo') ]
 
-    form.evt.choices = evts
-    event_form.event.choices = evts
+    form.gp.choices = groups
+    #event_form.event.choices = evts
     form.friend.choices = friends
 
-    demo_evt = Events.query.filter_by(evt_name='Mars Trip').first()
-    friend_list = get_friend_list(demo_evt.id)
+    demo_gp = Groups.query.filter_by(gp_name = gp_name).first()
+    friend_list = get_friend_list(demo_gp.gp_name)
 
     if form.validate_on_submit():
        
         cost = form.cost.data
-        event_id = form.evt.data
+        group_name = form.gp.data
         cost_info = form.cost_info.data
         username = form.friend.data
 
-        event = Events.query.get_or_404(event_id)
-        evt_name = event.evt_name
+        # group = Groups.query.get_or_404(group_name)
+        # evt_name = event.evt_name
         
-        expense = Expenses( username = username, event_id=event_id, cost=cost, cost_info=cost_info )
+        expense = Expenses( username = username, group_name=group_name, cost=cost, cost_info=cost_info )
         
         try:
             db.session.add(expense)
@@ -425,34 +411,32 @@ def demo_app():
             flash(f"Integrity Error: You have entered your expense report", "danger")
             return render_template("message.html", msg="Error")
         
-        exps = Expenses.query.filter_by(event_id=event_id).all()
-        friend_list = get_friend_list(event_id)
+        exps = Expenses.query.filter_by(group_name=group_name).all()
+        friend_list = get_friend_list(group_name)
         
-        evtExpenses = EvtExpenses(exps)
-        flash(f"Splitting expenses between nemo and friends. If action required, payment will be settled soon", "info")
+        gpExpenses = GroupExpenses(exps)
+        flash(f"Splitting expenses between Nemo and friends. If action required, payment will be settled soon", "info")
    
         return render_template("/expenses/payment.html", 
-                            payments=evtExpenses.payments, 
-                            event_name=evt_name,
-                            event_id = event_id,
-                            total_cost=evtExpenses.total_cost,
-                            target=evtExpenses.target)
+                            payments=gpExpenses.payments, 
+                            group_name=group_name,
+                            total_cost=gpExpenses.total_cost,
+                            target=gpExpenses.target)
         
     flash(f"This is a Demo of the CostTracker App!", "info")
-    return render_template("/demo/demo_form.html", form=form, friend_list=friend_list, evt_name=evt_name )
+    return render_template("/demo/demo_form.html", form=form, friend_list=friend_list, gp_name=gp_name )
 
 
 def init_demo_data():
-    evt_name = "Mars Trip"
+    gp_name = "Mars Trip"
     demo = "demo"
   
-    #Expenses.query.filter_by(username='nemo').delete()
-    evt1 = Events(
-     evt_name = evt_name,
-     evt_type =  'demo'
+    gp1 = Groups(
+     gp_name = gp_name,
+     gp_type =  'demo'
     )
     try:
-        event_id =  db.session.add(evt1)
+        id =  db.session.add(gp1)
         db.session.commit()
     except IntegrityError:
             db.session.rollback()
@@ -491,26 +475,18 @@ def init_demo_data():
     except IntegrityError:
         db.session.rollback()
 
-    # u = User.query.filter_by(username='blueWhale').first()
-    # blueWhaleId = u.id
-
-    # u = User.query.filter_by(username='jellyfish').first()
-    # jellyFishId = u.id
-
-    demo_evt = Events.query.filter_by(evt_name=evt_name).first()
-    demo_evt_id = demo_evt.id
-
+    #demo_gp = Groups.query.filter_by(gp_name=gp_name).first()
 
     e1 = Expenses(
         username="Blue Whale",
-        event_id = demo_evt_id,
+        group_name = gp_name,
         cost=1,
         cost_info="Hotel and gas"
     )
 
     e2 = Expenses(
         username="Jelly Fish",
-        event_id =  demo_evt_id,
+        group_name = gp_name,
         cost=3,
         cost_info="Food and drinks"
     )

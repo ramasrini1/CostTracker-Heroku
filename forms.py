@@ -4,18 +4,18 @@ from wtforms.validators import InputRequired, Optional, DataRequired, Length
 from wtforms import PasswordField, TextAreaField, validators
 
 
-class AddEventForm(FlaskForm):
-    """Form for adding events."""
-    evt_name = StringField("Event Name")
+class AddGroupForm(FlaskForm):
+    """Form for adding groups."""
+    gp_name = StringField("Group Name")
 
-class ShowEventForm(FlaskForm):
-    """Form for adding events."""
-    event = SelectField("Event Name")
+class ShowGroupForm(FlaskForm):
+    """Form for adding groups."""
+    group = SelectField("Group Name")
     
 class AddExpenseForm(FlaskForm):
   """Add Expenes Form """
   
-  evt = SelectField("Select Event", coerce=int)
+  gp = SelectField("Select Group")
   friend = SelectField("Select Friend", validators=[InputRequired()])
   cost = IntegerField("Enter expense amt", validators=[validators.NumberRange(min=1, max=None)] )
   cost_info = StringField("Expense Info(optional)")

@@ -1,14 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
   <h1>Groups:</h1>
+  <hr>
   <div  align="center" class="container">
-    {% for event in events %}
+    {% for group in groups %}
     <div class="row justify-content-md-center">
       <div class="col-md-2 mt-2">
-        <b>{{ event.evt_name }}</b>
+        <b>{{ group.gp_name }}</b>
       </div>
       <div class="col-md-4  mt-2">
-        <a  href="/event/expenses/{{event.id}}"><i>Split Expenses</a></i></a>  
+        <a  href="/groups/expenses/{{group.gp_name}}"><i>Split Expenses</a></i></a>  
       </div>
       <div class="w-100 mt-2"><hr></div>
      

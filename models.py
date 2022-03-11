@@ -11,14 +11,14 @@ def connect_db(app):
 
 # MODELS GO BELOW!
 
-class Events(db.Model):
-    """Events Model"""  
-    __tablename__ = "events"
+class Groups(db.Model):
+    """Groups Model"""  
+    __tablename__ = "groups"
     
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    evt_name = db.Column(db.Text, nullable=False, unique=True)
-    evt_type = db.Column(db.Text, nullable=True)
-    expenses = db.relationship("Expenses", backref="events")
+    #id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    gp_name = db.Column(db.Text, nullable=False, primary_key=True, unique=True)
+    gp_type = db.Column(db.Text, nullable=True)
+    #expenses = db.relationship("Expenses", backref="groups")
 
 
 class Expenses(db.Model):
@@ -26,7 +26,7 @@ class Expenses(db.Model):
     
     __tablename__ = "expenses"
     __table_args__ = (
-        UniqueConstraint('username', 'event_id', name='username_evtid'),
+        UniqueConstraint('username', 'group_name', name='username_group'),
     )
     
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -35,9 +35,9 @@ class Expenses(db.Model):
         db.ForeignKey('users.username'), 
         nullable=False
     )
-    event_id = db.Column(
-        db.Integer, 
-        db.ForeignKey('events.id'), 
+    group_name = db.Column(
+        db.String, 
+        db.ForeignKey('groups.gp_name'), 
         nullable=False
     )
     cost = db.Column(db.Integer, nullable=False)

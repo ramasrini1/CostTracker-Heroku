@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
   {% if friend_list  %}
-  <h6><a  href="/event/expenses/{{event_id}}"><i>Split Expenses</a></i></a>&nbsp;for {{evt_name}} </h6>
+  <h6><a  href="/groups/expenses/{{group_name}}"><i>Split Expenses</a></i></a>&nbsp;for {{group_name}} </h6>
    <div>
     Friend List: [ &nbsp;
      {% for friend in friend_list %}

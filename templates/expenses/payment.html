@@ -3,7 +3,7 @@
 {% block content %}
     <h1 align="center">Payment/Expense Report</h1>
     <br>
-    <h4 align="center">Event: <b>{{event_name}}</b> 
+    <h4 align="center">Group: <b>{{group_name}}</b> 
     <h6 align="center">Total Cost: ${{total_cost}} (Cost per person: ${{target}})</h6><br>
     
     <div align="center" class="justify-content-md-center d-none d-md-block">
@@ -73,7 +73,7 @@
               <form action= "/send_payment" method="POST">
                 <input type="hidden" name="user_name" value="{{payment['user_name']}}">
                 <input type="hidden" name="amt" value="{{payment['amt']}}">
-                <input type="hidden" name="evt" value="{{event_id}}">
+                <input type="hidden" name="gp" value="{{group_name}}">
                 <button class="btn btn-primary btn-sm" type="submit">Send Money</button>
               </form>
           </div>
@@ -84,7 +84,7 @@
               <form action= "/request_payment" method="POST">
                 <input type="hidden" name="user_name" value="{{payment['user_name']}}">
                 <input type="hidden" name="amt" value="{{payment['amt']}}">
-                <input type="hidden" name="evt" value="{{event_id}}">
+                <input type="hidden" name="gp" value="{{group_name}}">
                 <button class="btn btn-primary btn-sm" type="submit">Request Money</button>
               </form>  
             </div>
