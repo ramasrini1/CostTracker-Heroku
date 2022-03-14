@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+    
+    <h4>Welcome {{g.user.username}}!</h4>
+    <div>
+      <form method="POST">
+        {{ form.hidden_tag() }}
+        {% for field in form if field.widget.input_type != 'hidden'%}
+          {% for error in field.errors  %}
+            <span class="text-danger">{{ error }}</span>
+          {% endfor %}
+          {{field.label}}
+          {{ field(placeholder=field.label.text, class="form-control") }}
+        {% endfor %}
+        
+        <button class="btn btn-outline-success btn-block">Add My Message</button>
+      </form>
+    </div>
+    <h4 align="center">Messages:</h4>
+    <div class="mt-3">
+      
+      {% for lst in msg_lst %}
+        <div class="row">
+          <div align="center" class="col-md-12 msg_header">
+            <span><b>Group:</b> {{lst.group_name}}</span>
+            <span><b>From: </b>{{lst.username}}
+              <b>Date: </b> {{lst.date.strftime('%d %B %Y')}}
+            </span>
+           
+          {% if g.user.username == lst.username %}
+            <span>
+            <!-- <form method="POST" action="/messages/{{ lst.msg_id }}/delete"> -->
+            &nbsp;<a href="/messages/{{ lst.msg_id }}/delete"><i class="red fa fa-trash">&nbsp;Delete</i></a>
+            <!-- </form> -->
+            </span>
+          {% endif %}
+          </div>
+          <div class="text col-md-12">
+            <div class="p-2">{{lst.text}}</div>
+          </div>
+        </div>
+      
+      {% endfor %}
+     
+     
+    </div>
+
+{% endblock %}

@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, FloatField, BooleanField, IntegerField, RadioField, SelectField
+from wtforms import StringField, FloatField, BooleanField, IntegerField, RadioField, SelectField, SelectMultipleField
 from wtforms.validators import InputRequired, Optional, DataRequired, Length
 from wtforms import PasswordField, TextAreaField, validators
 
@@ -34,3 +34,12 @@ class LoginForm(FlaskForm):
 class AdminForm(FlaskForm):
     """Admin form."""
     access_token = StringField('Access Token', validators=[Length(min=6)])
+
+class AddGroupsForm(FlaskForm):
+    """Multi Select form."""
+    msg_groups = SelectMultipleField('Select Groups (Use command/control to select multiple)')
+
+class MessageForm(FlaskForm):
+    """Form for adding/editing messages."""
+    msg_group = SelectField('Select Group')
+    text = TextAreaField('Enter Your Message', validators=[DataRequired()])

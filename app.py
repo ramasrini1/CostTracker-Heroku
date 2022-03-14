@@ -1,11 +1,18 @@
 from flask import Flask, request, render_template,  redirect, flash, session, g, abort
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
-from models import db, connect_db, Groups, Expenses, User
-from forms import AddGroupForm, AddExpenseForm, UserAddForm, LoginForm, AdminForm, ShowGroupForm
+
+from models import db, connect_db, Groups, Expenses, User, Message, Subscribers
+from forms import (
+    AddGroupForm, AddExpenseForm, UserAddForm, LoginForm, 
+    AdminForm, ShowGroupForm, AddGroupsForm, MessageForm )
+
 from expenses import GroupExpenses
+import queries
+
 from venmo import Venmo
 import os
+
 
 app = Flask(__name__)
 
@@ -28,7 +35,9 @@ app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 debug = DebugToolbarExtension(app)
 
 connect_db(app)
-#db.create_all()
+
+demo_user = 'demo_user'
+demo_group = 'Demo Group'
 
 ##############################################################################
 # User signup/login/logout
@@ -70,6 +79,7 @@ def signup():
             return render_template('users/signup.html', form=form)
 
         do_login(user)
+        join_chat_group("general")
 
         return redirect("/")
 
@@ -86,6 +96,17 @@ def do_logout():
 
     if CURR_USER_KEY in session:
         del session[CURR_USER_KEY]
+
+def join_chat_group(gp_name):
+    g.user = User.query.get(session[CURR_USER_KEY])
+    username = g.user.username
+   
+    s1 = Subscribers(username=username, group_name=gp_name)
+    try:
+        db.session.add(s1)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
 
 @app.route('/login', methods=["GET", "POST"])
 def login():
@@ -136,7 +157,6 @@ def add_group():
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            msg = f"Choose another name"
             flash(f"This group {gp_name} already exists.", "danger")
             return redirect("/groups/new")
         
@@ -144,11 +164,40 @@ def add_group():
     
     return render_template("/groups/add_group.html", form=form)
 
+
 @app.route("/groups/list")
-def list_groupss():
+def list_groups():
     """Return all groups in db."""
     groups = Groups.query.filter_by(gp_type = None)
     return render_template("/groups/group_list.html", groups=groups)
+
+## ToDo Feature
+@app.route("/groups/join",  methods=["GET", "POST"])
+def join_groups():
+
+    if ( g.user is None ):
+        return render_template("/message.html", msg="You need to login to join a group")
+    
+    form = AddGroupsForm()
+    form.msg_groups.choices =  queries.get_msg_groups()
+
+    if form.validate_on_submit():
+        group_names = form.msg_groups.data
+        
+        for group_name in group_names:
+            print(f"groupname is {group_name}")
+            s = Subscribers(username=g.user.username, group_name=group_name)
+            try:
+                db.session.add(s)
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash(f"You have already subscribed to this group", "danger")
+                return render_template("/messages/subscribe.html", form=form)
+            
+        return render_template("/message.html", msg="Thank you for joining the group")
+    
+    return render_template("/messages/subscribe.html", form=form)
 
 
 ##############################################################################
@@ -161,18 +210,21 @@ def add_expense():
     """
     
     if ( g.user is None ):
-        msg = "Login First to enter report"
+        msg = "Sign up/Login First to enter report"
         return render_template("/message.html", msg=msg)
-
-    form =  AddExpenseForm()
     
-    groups = [ [group.gp_name, group.gp_name] for group in Groups.query.filter_by(gp_type = None)]
-    friends = [ [user.username, user.username] for user in User.query.filter_by(role = None) ]
+    # TODO: In real app we can restrict but for now let demo_users access all features
+    # if ( g.user.username == demo_user):
+    #     msg = f"Please Sign up to access all the features of this app !"
+    #     flash("Access Denied for demo users", "danger")
+    #     return render_template("/message.html", msg=msg)
+  
 
     friend_list = []
-
-    form.gp.choices = groups
-    form.friend.choices = friends
+    form =  AddExpenseForm()
+    
+    form.gp.choices = queries.getGroupsTuple()
+    form.friend.choices = queries.getFriendsTuple()
 
     if form.validate_on_submit():
        
@@ -181,14 +233,16 @@ def add_expense():
         cost_info = form.cost_info.data
         username = form.friend.data
 
-        exps = db.session.query(Expenses).filter(Expenses.group_name == group_name).filter( (Expenses.status == 'paid') | (Expenses.status== 'Request Sent') | (Expenses.status == 'No Action') )
+        #Get expenses of the group whose status is 'Paid' or 'Request Sent' or 'No Action'
+        exps = queries.getExpensesBasedOnStatus(group_name)
+        
         #If any of the expenses have been processed, no more expenses can be 
-        # added for that event.
+        # added for that group.
 
         if (exps.count() > 0):
             flash(f"Deadline over expenses computed you can no longer add additional expenses", "danger")
             
-            friend_list = get_friend_list(group_name)
+            friend_list = queries.get_friend_list(group_name)
             return render_template("/expenses/add_expense_form.html", form=form, 
                                     group_name=group_name, 
                                     friend_list=friend_list )
@@ -202,14 +256,14 @@ def add_expense():
             db.session.rollback()
          
             flash(f"Integrity Error: You have entered your expense report", "danger")
-            friend_list = get_friend_list(group_name)
+            friend_list = queries.get_friend_list(group_name)
             
             return render_template("/expenses/add_expense_form.html", form=form, 
                                     group_name=group_name, friend_list=friend_list )
            
         
-        #Get Friends/usernames for the event from expense table
-        friend_list = get_friend_list(group_name)
+        #Get Friends/usernames for the Group from Expense table
+        friend_list = queries.get_friend_list(group_name)
         
         flash(f"Friend {username} expense added", "info")
 
@@ -218,27 +272,18 @@ def add_expense():
     
     return render_template("/expenses/add_expense_form.html", form=form )
 
-#Get Friends/usernames for the event from expense table
-def get_friend_list(group_name):
-    friend_list = []
-    
-    exp_list = Expenses.query.filter_by(group_name=group_name)
-    if (exp_list.count() > 0):
-        for e in exp_list:
-            friend_list.append(e.username)
-    return friend_list
-
-
 
 @app.route("/groups/expenses/<group_name>", methods=["GET", "POST"])
 def show_expenses(group_name):
     """Split Expenses For this group among friends
     """
+   
     results = Expenses.query.filter_by(group_name=group_name)
+    
     if (results.count() == 0):
         return render_template("/message.html", msg="No Expenses Entered")
-
-    exps = Expenses.query.filter_by(group_name=group_name).all()
+    
+    exps = queries.getExpenses(group_name)
 
     gpExpenses = GroupExpenses(exps)
    
@@ -248,6 +293,7 @@ def show_expenses(group_name):
                             total_cost=gpExpenses.total_cost,
                             target=gpExpenses.target)
 
+
 @app.route("/request_payment", methods=["GET", "POST"])
 def request_payment():
     """Request Payment: Get payment details from get request
@@ -256,7 +302,7 @@ def request_payment():
     amount = request.form['amt']
     amount = float(amount)
     user_name = request.form['user_name']
-    gp_name  = request.form['gp']
+    group_name  = request.form['gp']
     
     
     msg = f"Permission Denied Log In As Admin"
@@ -271,19 +317,19 @@ def request_payment():
             venmo = Venmo(access_token)
             user_id = venmo.get_user_id_by_username(user_name)
             
-            message = f"Request payment ${amount} for event {gp_name}"
+            message = f"Request payment ${amount} for event {group_name}"
     
             success = venmo.request_money(amount, message, user_id)
     
             if (success):
-             
-                single_expense = Expenses.query.filter_by(group_name=gp_name, username=user_name).first()
+                single_expense = queries.getExpensesByGpAndUserNames(group_name, user_name)
+                #single_expense = Expenses.query.filter_by(group_name=gp_name, username=user_name).first()
                 
                 single_expense.status = 'Request Sent'
                 single_expense.payment_amt = amount
                 db.session.commit()
                 
-                msg = f"{gp_name}:Sent payment request to Venmo user_id: ({user_name})for ${amount}"
+                msg = f"{group_name}:Sent payment request to Venmo user_id: ({user_name})for ${amount}"
             else:
                 msg = f"Unable to send payment request to user_id: {user_name}"
     
@@ -315,7 +361,7 @@ def send_payment():
             success = venmo.send_money(payment_amount, payment_note, user_id )
 
             if (success):
-                single_expense = Expenses.query.filter_by(group_name=group_name, username=user_name).first()
+                single_expense = queries.getExpensesByGpAndUserNames(group_name, user_name)
                 single_expense.status = 'Paid'
                 single_expense.payment_amt = payment_amount
                 db.session.commit()
@@ -361,7 +407,7 @@ def remove_token():
         if ACCESS_TOKEN in session:
             del session[ACCESS_TOKEN]
             return render_template("/message.html", msg="Removed Token From System")
-    return render_template("/message.html", msg="Unable to Remove token From System")
+    return render_template("/message.html", msg="Unable to Remove token From System.")
 
 def is_admin(username):
     user = User.query.filter_by(username=username).first()
@@ -373,22 +419,34 @@ def is_admin(username):
 # Demo Route
 @app.route("/demo/demo_app", methods=["GET", "POST"])
 def demo_app():
-    init_demo_data()
-    gp_name = "Mars Trip"
-    Expenses.query.filter_by(username='Nemo').delete()
+  
+    gp_name =  demo_group
+    username = demo_user
+    Expenses.query.filter_by(username = username).delete()
+    db.session.commit()
+    #Expenses.query.filter_by(username='Nemo').delete()
+    user = User.query.filter_by(username=username).first()
     
+    do_login(user)
+
+    return redirect("/demo/expense")
+
+
+@app.route("/demo/expense", methods=["GET", "POST"])
+def demo_expense():
+    gp_name =  demo_group
+    username = demo_user
+
     form =  AddExpenseForm()
-    #group_form = ShowGroupForm()
-    
-    groups = [ [group.gp_name, group.gp_name] for group in Groups.query.filter_by(gp_name = gp_name)]
-    friends = [ [user.username, user.username] for user in User.query.filter_by(username = 'Nemo') ]
+   
+    groups = [ [group.gp_name, group.gp_name] for group in queries.getGroupByGpName(gp_name)]
+    friends = [ [user.username, user.username] for user in queries.getUserByUsername(username) ]
 
     form.gp.choices = groups
-    #event_form.event.choices = evts
     form.friend.choices = friends
 
     demo_gp = Groups.query.filter_by(gp_name = gp_name).first()
-    friend_list = get_friend_list(demo_gp.gp_name)
+    friend_list = queries.get_friend_list(demo_gp.gp_name)
 
     if form.validate_on_submit():
        
@@ -396,10 +454,7 @@ def demo_app():
         group_name = form.gp.data
         cost_info = form.cost_info.data
         username = form.friend.data
-
-        # group = Groups.query.get_or_404(group_name)
-        # evt_name = event.evt_name
-        
+      
         expense = Expenses( username = username, group_name=group_name, cost=cost, cost_info=cost_info )
         
         try:
@@ -411,102 +466,70 @@ def demo_app():
             flash(f"Integrity Error: You have entered your expense report", "danger")
             return render_template("message.html", msg="Error")
         
-        exps = Expenses.query.filter_by(group_name=group_name).all()
-        friend_list = get_friend_list(group_name)
+        exps = queries.getExpenses(group_name)
+        friend_list = queries.get_friend_list(group_name)
         
         gpExpenses = GroupExpenses(exps)
-        flash(f"Splitting expenses between Nemo and friends. If action required, payment will be settled soon", "info")
-   
+        flash(f"Splitting expenses between demo_user and friends. If action required, payment will be settled soon", "info")
+       
         return render_template("/expenses/payment.html", 
                             payments=gpExpenses.payments, 
                             group_name=group_name,
                             total_cost=gpExpenses.total_cost,
                             target=gpExpenses.target)
         
-    flash(f"This is a Demo of the CostTracker App!", "info")
+    flash(f"This is a Demo of the Cost Tracker App!", "info")
     return render_template("/demo/demo_form.html", form=form, friend_list=friend_list, gp_name=gp_name )
 
-
-def init_demo_data():
-    gp_name = "Mars Trip"
-    demo = "demo"
   
-    gp1 = Groups(
-     gp_name = gp_name,
-     gp_type =  'demo'
-    )
-    try:
-        id =  db.session.add(gp1)
-        db.session.commit()
-    except IntegrityError:
-            db.session.rollback()
-
-    f1 = User(
-        username = "Nemo",
-        role = demo,
-        password = "nemopass"
-    )
-    f2 = User(
-        username = "Jelly Fish",
-        role = demo,
-        password = "jellypass"
-    )
-    f3 = User(
-        username = "Blue Whale",
-        role = demo,
-        password = "whalepass"
-    )
-
-    try:
-        db.session.add(f1)
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-
-    try:
-        jellyFishId =  db.session.add(f2)
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-
-    try:
-        blueWhaleId = db.session.add(f3)
-        db.session.commit()
-    except IntegrityError:
-        db.session.rollback()
-
-    #demo_gp = Groups.query.filter_by(gp_name=gp_name).first()
-
-    e1 = Expenses(
-        username="Blue Whale",
-        group_name = gp_name,
-        cost=1,
-        cost_info="Hotel and gas"
-    )
-
-    e2 = Expenses(
-        username="Jelly Fish",
-        group_name = gp_name,
-        cost=3,
-        cost_info="Food and drinks"
-    )
-
-    try:
-        db.session.add(e1)
-        db.session.commit()
-    except IntegrityError:
-        print("err1")
-        db.session.rollback()
-    
-    try:
-        db.session.add(e2)
-        db.session.commit()
-    except IntegrityError:
-        print("err2")
-        db.session.rollback()
     
 ##############################################################################
 # About Route
 @app.route("/about", methods=["GET", "POST"])
 def about():
     return render_template("/about.html")
+
+
+##############################################################################
+# Message Route
+@app.route("/messages/<username>", methods=["GET", "POST"])
+def message(username):
+    
+    #Check if username is logged in before seeing or sending messages
+    
+    if (g.user.username != username):
+        flash("Login with correct credential to view the chat", "info")
+        return redirect("/")
+    
+    form = MessageForm()
+    form.msg_group.choices =  queries.get_msg_groups()
+    # get chat messages for the user
+    msg_lst = queries.get_chat_msg(g.user.username)
+ 
+
+    if form.validate_on_submit():
+        group_name = form.msg_group.data
+        text = form.text.data
+        m = Message(group_name=group_name, username=g.user.username, text=text)
+        db.session.add(m)
+        db.session.commit()
+        flash("Your message has been added", "success")
+        msg_lst = queries.get_chat_msg(g.user.username)
+       
+    
+    return render_template("/messages/msg_board.html", form=form, msg_lst=msg_lst)
+
+
+@app.route("/messages/<int:msg_id>/delete", methods=["GET", "POST"])
+def delete_message(msg_id):
+    msg = queries.get_msg_byId(msg_id)
+    
+    if ( msg.username != g.user.username):
+        flash("You don't have permissions to delete", "danger")
+        return redirect(f"/messages/{g.user.username}")
+    
+    Message.query.filter_by(id = msg_id).delete()
+    db.session.commit()
+    flash("Message deleted", "info")
+    return redirect(f"/messages/{g.user.username}")
+    

@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint
 from flask_bcrypt import Bcrypt
+from datetime import datetime
 
 db = SQLAlchemy()
 bcrypt = Bcrypt()
@@ -15,10 +16,9 @@ class Groups(db.Model):
     """Groups Model"""  
     __tablename__ = "groups"
     
-    #id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     gp_name = db.Column(db.Text, nullable=False, primary_key=True, unique=True)
     gp_type = db.Column(db.Text, nullable=True)
-    #expenses = db.relationship("Expenses", backref="groups")
+  
 
 
 class Expenses(db.Model):
@@ -108,3 +108,66 @@ class User(db.Model):
                 return user
 
         return False
+
+class Message(db.Model):
+    """An individual message ("from groups")."""
+
+    __tablename__ = 'messages'
+
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+    )
+
+    text = db.Column(
+        db.String(140),
+        nullable=False,
+    )
+
+    timestamp = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow(),
+    )
+
+    username = db.Column(
+        db.Text,
+        db.ForeignKey('users.username', ondelete='CASCADE'),
+        nullable=False,
+    )
+
+    group_name = db.Column(
+        db.Text,
+        db.ForeignKey('groups.gp_name', ondelete='CASCADE'),
+        nullable=False,
+    )
+
+    category = db.Column(
+        db.String(30),
+    )
+
+    user = db.relationship('User')
+
+class Subscribers(db.Model):
+    """Users subscribed to the group."""
+    
+    __tablename__ = 'subscribers'
+
+    __table_args__ = (
+        UniqueConstraint('username', 'group_name', name='u_g'),
+    )
+   
+    id = db.Column(
+        db.Integer,
+        primary_key=True,
+    )
+    username = db.Column(
+        db.Text,
+        db.ForeignKey('users.username', ondelete='CASCADE'),
+        nullable=False,
+    )
+    group_name = db.Column(
+        db.Text,
+        db.ForeignKey('groups.gp_name', ondelete='CASCADE'),
+        nullable=False,
+    )
