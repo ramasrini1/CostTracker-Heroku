@@ -1,36 +1,13 @@
 from app import app
 from models import db, Groups, Expenses, User, Subscribers, Message
+#from models import db, Groups, Expenses
 
 db.drop_all()
 db.create_all()
 
-#Create General gp for all groups chat
-name = "General"
-g = Groups(
-  gp_name = name,
-  gp_type = name
-)
-try:
-    id =  db.session.add(g)
-    db.session.commit()
-except IntegrityError:
-        db.session.rollback()
-
-
-#Create Demo data
-gp_name = "Demo Group"
 demo = "demo"
 
-gp1 = Groups(
-  gp_name = gp_name,
-  gp_type =  'demo'
-)
-try:
-    id =  db.session.add(gp1)
-    db.session.commit()
-except IntegrityError:
-        db.session.rollback()
-
+#Create demo users
 f1 = User(
     username = "demo_user",
     role = demo,
@@ -71,7 +48,37 @@ try:
 except IntegrityError:
     db.session.rollback()
 
-  #demo_gp = Groups.query.filter_by(gp_name=gp_name).first()
+#Create General gp for all groups chat
+# name = "General"
+# g = Groups(
+#   gp_name = name,
+#   gp_type = name,
+#   gp_owner = 'demo_user'
+
+# )
+# try:
+#     id =  db.session.add(g)
+#     db.session.commit()
+# except IntegrityError:
+#         db.session.rollback()
+
+
+# #Create Demo Group
+gp_name = "Demo Group"
+
+gp1 = Groups(
+  gp_name = gp_name,
+  gp_type =  demo,
+  gp_owner = 'demo_user'
+)
+try:
+    id =  db.session.add(gp1)
+    db.session.commit()
+except IntegrityError:
+        db.session.rollback()
+
+
+#   #demo_gp = Groups.query.filter_by(gp_name=gp_name).first()
 
 e1 = Expenses(
     username="Blue Whale",

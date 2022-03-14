@@ -18,9 +18,14 @@ class Groups(db.Model):
     
     gp_name = db.Column(db.Text, nullable=False, primary_key=True, unique=True)
     gp_type = db.Column(db.Text, nullable=True)
+    gp_owner = db.Column(
+        db.Text,   
+        db.ForeignKey('users.username', ondelete='CASCADE'),  
+      nullable=False
+    )
+
+    
   
-
-
 class Expenses(db.Model):
     """Expenses Model"""  
     
@@ -32,12 +37,12 @@ class Expenses(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column( 
         db.Text, 
-        db.ForeignKey('users.username'), 
+        db.ForeignKey('users.username', ondelete='CASCADE'), 
         nullable=False
     )
     group_name = db.Column(
         db.String, 
-        db.ForeignKey('groups.gp_name'), 
+        db.ForeignKey('groups.gp_name', ondelete='CASCADE'), 
         nullable=False
     )
     cost = db.Column(db.Integer, nullable=False)
@@ -146,7 +151,7 @@ class Message(db.Model):
         db.String(30),
     )
 
-    user = db.relationship('User')
+   
 
 class Subscribers(db.Model):
     """Users subscribed to the group."""

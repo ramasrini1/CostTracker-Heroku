@@ -146,11 +146,22 @@ def home_page():
 @app.route('/groups/new', methods=["GET", "POST"])
 def add_group():
     """Renders add group form (GET) or handles event form submission (POST)"""
+    if (g.user is None):
+        msg = "Need to login"
+        flash("Need to login or signup to add a group", "danger")
+        return render_template("/message.html", msg=msg)
+       
+    
+    if ( g.user.username == demo_user):
+        msg = f"Please Sign up to access all the features of this app !"
+        flash("Access Denied for demo users", "danger")
+        return render_template("/message.html", msg=msg)
+    
     form = AddGroupForm()
     
     if form.validate_on_submit():
         gp_name = form.gp_name.data
-        group = Groups( gp_name = gp_name )
+        group = Groups( gp_name = gp_name, gp_owner=g.user.username )
         
         try:
             db.session.add(group)
@@ -213,11 +224,10 @@ def add_expense():
         msg = "Sign up/Login First to enter report"
         return render_template("/message.html", msg=msg)
     
-    # TODO: In real app we can restrict but for now let demo_users access all features
-    # if ( g.user.username == demo_user):
-    #     msg = f"Please Sign up to access all the features of this app !"
-    #     flash("Access Denied for demo users", "danger")
-    #     return render_template("/message.html", msg=msg)
+    if ( g.user.username == demo_user):
+        msg = f"Please Sign up to access all the features of this app !"
+        flash("Access Denied for demo users", "danger")
+        return render_template("/message.html", msg=msg)
   
 
     friend_list = []
@@ -414,6 +424,26 @@ def is_admin(username):
     if ( user.role == 'admin'):
         return True
     return False
+
+@app.route('/admin/addGp', methods=["GET", "POST"])
+def addGp():
+    msg = "Not Valid user"
+    name = "General"
+    if (g.user and is_admin(g.user.username)):
+        msg = "valid user"
+        #Create General gp for all groups chat
+        gp = Groups( gp_name = name, gp_type = name, gp_owner = g.user.username )
+        try:
+            id =  db.session.add(gp)
+            db.session.commit()
+            msg = "General gp created"
+        except IntegrityError:
+            msg = "IntegrityError, Group Exists"
+            db.session.rollback()
+        
+    return render_template("/message.html", msg=msg)
+    
+   
 
 ##############################################################################
 # Demo Route
