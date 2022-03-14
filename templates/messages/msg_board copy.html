@@ -21,34 +21,20 @@
       
       {% for lst in msg_lst %}
         <div class="row">
-          <div class="col-sm-3 msg_header">
+          <div align="center" class="col-md-12 msg_header">
             <span><b>Group:</b> {{lst.group_name}}</span>
-          </div>
-          <div class="col-sm-3 msg_header">
-            <span><b>From: </b>{{lst.username}} </span>
-          </div>
-          <div class="col-sm-6 msg_header">
-            <span><b>Date: </b> {{lst.date.strftime('%d %B %Y')}}</span>
-          </div>
-          
+            <span><b>From: </b>{{lst.username}}
+              <b>Date: </b> {{lst.date.strftime('%d %B %Y')}}
+            </span>
+           
           {% if g.user.username == lst.username %}
-          <div class=" col-sm-12 msg_header">
             <span>
             <!-- <form method="POST" action="/messages/{{ lst.msg_id }}/delete"> -->
             &nbsp;<a href="/messages/{{ lst.msg_id }}/delete"><i class="red fa fa-trash">&nbsp;Delete</i></a>
             <!-- </form> -->
             </span>
+          {% endif %}
           </div>
-          {% else %}
-          <div class="text-muted  col-sm-12 msg_header">
-          <span>
-            <!-- <form method="POST" action="/messages/{{ lst.msg_id }}/delete"> -->
-            &nbsp;<i class="text-muted fa fa-trash">&nbsp;Delete</i>
-            <!-- </form> -->
-            </span>
-          </div>
-          {% endif%}
-        
           <div class="text col-md-12">
             <div class="p-2">{{lst.text}}</div>
           </div>
